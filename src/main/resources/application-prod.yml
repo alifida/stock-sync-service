@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db-server:5432/stockdb
+    driver-class-name: org.postgresql.Driver
+    username: stock_user
+    password: strong_password
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+  rabbitmq:
+    host: rabbitmq-server
+    port: 5672
+    username: stock_app
+    password: strong_password
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
