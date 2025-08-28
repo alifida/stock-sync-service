@@ -192,7 +192,7 @@ public interface VendorClient {
 - ✅ Fully functional Spring Boot microservice
 - ✅ Modular codebase with vendor abstraction
 - ✅ Dockerfile for containerized deployment
-- ✅ Comprehensive README (this document)
+- ✅ Comprehensive README 
 - ✅ Git history demonstrating incremental progress
 - ✅ Automated tests (unit + integration)
 - ✅ Example vendor simulation (REST + CSV)
