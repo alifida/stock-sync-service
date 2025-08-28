@@ -1,13 +1,13 @@
-package com.example.stocksyncservice;
+package com.example.stocksync;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class StockSyncServiceApplication {
+public class StockSyncApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(StockSyncServiceApplication.class, args);
+		SpringApplication.run(StockSyncApplication.class, args);
 	}
 
 }
