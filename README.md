@@ -112,6 +112,7 @@ public interface VendorClient {
     List<ProductDTO> fetchStock();
 }
 
+```
 
 ### Concrete Implementations
 
