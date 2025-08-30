@@ -26,7 +26,10 @@ class StockSyncServiceTest {
     @Test
     public void testSyncOnlyEnabledVendors() {
         Vendor enabledVendor = new Vendor("A", true);
+        enabledVendor.setType("CSV");
         Vendor disabledVendor = new Vendor("B", false);
+        disabledVendor.setType("CSV");
+
         vendorRepository.save(enabledVendor);
         vendorRepository.save(disabledVendor);
 

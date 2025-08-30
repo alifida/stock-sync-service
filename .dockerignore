@@ -1,0 +1,26 @@
+# Ignore target directory (where the build artifacts are)
+target/*
+
+# Allow the JAR file
+!target/stock-sync-service-0.0.1-SNAPSHOT.jar
+
+# Ignore Maven build files
+*.log
+*.md
+
+# Ignore source control files
+.git/
+.gitignore
+
+# Ignore any IDE-specific files
+.idea/
+.vscode/
+
+# Ignore Docker-related files (optional)
+Dockerfile*
+.dockerignore
+
+# Ignore any other unnecessary files
+*.iml
+
+

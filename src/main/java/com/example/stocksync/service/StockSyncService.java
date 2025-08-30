@@ -140,7 +140,7 @@ public class StockSyncService {
     public void syncStock() {
         List<Vendor> enabledVendors = vendorRepository.findByEnabledTrue();
         for (Vendor vendor : enabledVendors) {
-            VendorClient client = vendorClientFactory.getClient(vendor.getType());
+            VendorClient client = vendorClientFactory.getClient(vendor.getName());
             List<StockItem> items = client.fetchStock(vendor.getName());
             for (StockItem item : items) {
                 processStockDelta(vendor, item);
