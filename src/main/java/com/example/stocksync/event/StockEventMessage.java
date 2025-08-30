@@ -6,7 +6,8 @@ import java.time.Instant;
 
 @Data
 public class StockEventMessage implements Serializable {
-    private String productId;
+    private static final long serialVersionUID = -345282279499949306L;
+	private String productId;
     private String vendor;
     private int oldStock;
     private int newStock;
@@ -22,5 +23,5 @@ public class StockEventMessage implements Serializable {
         this.timestamp = Instant.now();
     }
 
-    // Getters/Setters omitted for brevity
+
 }

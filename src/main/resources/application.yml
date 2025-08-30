@@ -2,9 +2,27 @@ spring:
   application:
     name: stock-sync-service
 
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+
+  h2:
+    console:
+      enabled: true
+
   jackson:
     serialization:
       INDENT_OUTPUT: true
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 server:
   port: 8080

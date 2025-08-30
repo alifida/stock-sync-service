@@ -1,61 +1,121 @@
 package com.example.stocksync.service;
 
+import com.example.stocksync.model.Vendor;
 import com.example.stocksync.event.StockEventMessage;
 import com.example.stocksync.event.StockEventPublisher;
+import com.example.stocksync.model.StockEvent;
+import com.example.stocksync.model.StockItem;
+import com.example.stocksync.repository.StockEventRepository;
+import com.example.stocksync.repository.StockItemRepository;
+import com.example.stocksync.repository.VendorRepository;
+import com.example.stocksync.vendor.VendorClient;
+import com.example.stocksync.vendor.VendorClientFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class StockSyncService {
 
+    private final VendorClientFactory vendorClientFactory;
+    private final VendorRepository vendorRepository;
+    private final StockItemRepository stockItemRepository;
+    private final StockEventRepository stockEventRepository;
     private final StockEventPublisher eventPublisher;
 
-    // Simulating a local database for now
-    private final Map<String, Integer> productStockDb = new HashMap<>();
+    /**
+     * Sync all stock items for a vendor (Delta-based).
+     */
+    @Transactional
+    public void syncStockForVendor(String vendorName) {
+        log.info("Starting stock sync for vendor: {}", vendorName);
 
-    public StockSyncService(StockEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
+        Vendor vendor = vendorRepository.findByName(vendorName)
+                .orElseThrow(() -> new IllegalArgumentException("Vendor not found: " + vendorName));
 
-        // Pre-populate with some test data
-        productStockDb.put("P1001", 10);
-        productStockDb.put("P1002", 5);
-        productStockDb.put("P1003", 0);
+        VendorClient client = vendorClientFactory.getClient(vendorName);
+        List<StockItem> stockItems = client.fetchStock(vendorName);
+
+        stockItems.forEach(item -> processStockDelta(vendor, item));
+
+        log.info("Completed stock sync for vendor: {}", vendorName);
     }
 
     /**
-     * Syncs stock for a single product and fires an event if it changed.
+     * Handles stock changes (delta detection) for a single product.
      */
-    public void syncStock(String productId, int newStock, String vendor) {
-        int oldStock = productStockDb.getOrDefault(productId, 0);
+    private void processStockDelta(Vendor vendor, StockItem item) {
+        StockItem stockItem = stockItemRepository
+                .findByProductIdAndVendor_Name(item.getProductId(), vendor.getName())
+                .orElse(StockItem.builder()
+                        .productId(item.getProductId())
+                        .vendor(vendor)
+                        .stock(0)
+                        .build());
+
+        int oldStock = stockItem.getStock();
+        int newStock = item.getStock();
 
         if (oldStock != newStock) {
-            // Update local stock
-            productStockDb.put(productId, newStock);
-
-            // Publish event
-            StockEventMessage event = new StockEventMessage(
-                    productId, vendor, oldStock, newStock
-            );
-            eventPublisher.publishStockEvent(event);
-
-            System.out.println("Stock updated & event published: " + event.getProductId());
+            stockItem.setStock(newStock);
+            stockItemRepository.save(stockItem);
+            saveAndPublishEvent(item.getProductId(), vendor, oldStock, newStock);
+            log.info("Stock updated for product {}: {} -> {}", item.getProductId(), oldStock, newStock);
         } else {
-            System.out.println("No stock change for " + productId);
+            log.debug("No stock change for product {}", item.getProductId());
         }
     }
 
     /**
-     * Mock method to simulate syncing from a vendor API.
+     * Saves a StockEvent in the database and publishes it to the message queue.
      */
-    public void syncFromVendor(String vendor) {
-        // In real life, you'd call an API here
-        System.out.println("Syncing stock for vendor: " + vendor);
+    private void saveAndPublishEvent(String productId, Vendor vendor, int oldStock, int newStock) {
+        StockEvent stockEvent = StockEvent.builder()
+                .productId(productId)
+                .vendor(vendor)
+                .oldStock(oldStock)
+                .newStock(newStock)
+                .build();
+        stockEventRepository.save(stockEvent);
 
-        // Example updates
-        syncStock("P1001", 8, vendor); // Changed
-        syncStock("P1002", 5, vendor); // No change
-        syncStock("P1003", 2, vendor); // Changed
+        StockEventMessage eventMessage = new StockEventMessage(productId, vendor.getName(), oldStock, newStock);
+        eventPublisher.publishStockEvent(eventMessage);
     }
+    
+    
+    @Transactional
+    public void syncStock(String productId, int newStock, String vendorName) {
+        Vendor vendor = vendorRepository.findByName(vendorName)
+                .orElseThrow(() -> new IllegalArgumentException("Vendor not found: " + vendorName));
+
+        // Create a transient StockItem that represents the incoming data
+        StockItem incoming = StockItem.builder()
+                .productId(productId)
+                .stock(newStock)
+                .vendor(vendor)
+                .build();
+
+        // Reuse existing delta processing
+        processStockDelta(vendor, incoming);
+    }
+    
+    @Transactional
+    public void syncFromVendor(String vendorName) {
+        log.info("Triggering vendor-wide sync for: {}", vendorName);
+
+        VendorClient client = vendorClientFactory.getClient(vendorName);
+        List<StockItem> stockItems = client.fetchStock(vendorName);
+
+        Vendor vendor = vendorRepository.findByName(vendorName)
+                .orElseThrow(() -> new IllegalArgumentException("Vendor not found: " + vendorName));
+
+        stockItems.forEach(item -> processStockDelta(vendor, item));
+    }
+    
+    
 }
