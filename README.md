@@ -1,3 +1,31 @@
+# Stock Sync Service
+
+## Setup
+
+1. Build the app:
+   ```
+   mvn clean package
+   ```
+2. Run with Docker Compose:
+   ```
+   docker-compose up --build
+   ```
+
+## Vendor Simulation
+
+- **Vendor A:** Simulated via REST endpoint in `StockSyncSimulator.java`.
+- **Vendor B:** CSV file at `/tmp/vendor-b/stock.csv`.
+
+## Assumptions
+
+- Full sync each run.
+- Stock event detection logs and persists events.
+
+## Improvements
+
+- Add retry logic for vendor failures.
+- Pagination for large product lists.
+
 # Stock Sync Service – Design & Implementation Plan
 
 ## Overview

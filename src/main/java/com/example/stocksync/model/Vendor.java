@@ -36,9 +36,9 @@ public class Vendor {
 
     @Column(name = "api_key", length = 255)
     private String apiKey;
-
-    @Column(nullable = false, length = 20)
-    private String status = "ACTIVE";
+ 
+    @Column(name ="enabled")
+    private boolean enabled;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -56,4 +56,9 @@ public class Vendor {
     public void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+	public Vendor(String name, boolean enabled) {
+		this.name = name;
+		this.enabled = enabled;
+	}
 }

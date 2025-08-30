@@ -1,9 +1,10 @@
 package com.example.stocksync.vendor;
 
 
-import com.example.stocksync.model.StockItem;
 import java.util.List;
 
+import com.example.stocksync.model.StockItem;
+
 public interface VendorClient {
-    List<StockItem> fetchStock(String vendorName);
+    List<StockItem> fetchStock(String vendor);
 }

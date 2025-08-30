@@ -1,12 +1,15 @@
 package com.example.stocksync.repository;
 
 
-import com.example.stocksync.model.Vendor;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.example.stocksync.model.Vendor;
+
 public interface VendorRepository extends JpaRepository<Vendor, Long> {
-    Optional<Vendor> findByName(String name);           // <-- matches vendorRepository.findByName(vendorName)
-    Optional<Vendor> findByNameIgnoreCase(String name); // handy variant if you want case-insensitive
+    Optional<Vendor> findByName(String name);           
+    Optional<Vendor> findByNameIgnoreCase(String name); 
+    List<Vendor> findByEnabledTrue();
 }

@@ -1,27 +1,35 @@
 package com.example.stocksync.model;
 
-import jakarta.persistence.*;
-import lombok.*;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
     name = "stock_items",
-    uniqueConstraints = @UniqueConstraint(name = "uk_stockitem_vendor_product", columnNames = {"product_id","vendor_id"})
+    uniqueConstraints = @UniqueConstraint(name = "uk_stockitem_vendor_product", columnNames = {"sku","vendor"})
 )
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class StockItem {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    private UUID id;
 
-    @Column(name = "product_id", nullable = false) // <-- remove unique=true
-    private String productId;
-
-    @Column(nullable = false)
-    private Integer stock;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", nullable = false)
-    private Vendor vendor;
+    private String sku;
+    private String name;
+    private Integer stockQuantity;
+    private String vendor;
+    private LocalDateTime lastUpdated;
 }

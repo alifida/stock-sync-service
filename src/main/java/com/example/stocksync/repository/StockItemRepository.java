@@ -1,15 +1,15 @@
 package com.example.stocksync.repository;
 
-import com.example.stocksync.model.StockItem;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import java.util.Optional;
+import com.example.stocksync.model.StockItem;
 
 public interface StockItemRepository extends JpaRepository<StockItem, Long> {
 
-    Optional<StockItem> findByProductIdAndVendor_Name(String productId, String vendorName);
-
-    @Query("select s from StockItem s where s.productId = :productId and s.vendor.name = :vendorName")
-    Optional<StockItem> findByProductAndVendor(String productId, String vendorName);
+     
+    @Query("select s from StockItem s where s.sku = :sku and s.vendor = :vendorName")
+    Optional<StockItem> findBySkuAndVendor(String sku, String vendorName);
 }

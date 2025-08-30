@@ -18,8 +18,8 @@ public class StockSyncController {
     }
 
     @PostMapping("/{vendor}")
-    public String syncVendorStock(@PathVariable String vendorName) {
-        stockSyncService.syncFromVendor(vendorName);
-        return "Stock sync triggered for vendor: " + vendorName;
+    public String syncVendorStock(@PathVariable String vendor) {
+        stockSyncService.syncFromVendor(vendor);
+        return "Stock sync triggered for vendor: " + vendor;
     }
 }

@@ -1,21 +1,23 @@
 package com.example.stocksync.service;
 
-import com.example.stocksync.model.Vendor;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.stocksync.event.StockEventMessage;
 import com.example.stocksync.event.StockEventPublisher;
 import com.example.stocksync.model.StockEvent;
 import com.example.stocksync.model.StockItem;
+import com.example.stocksync.model.Vendor;
 import com.example.stocksync.repository.StockEventRepository;
 import com.example.stocksync.repository.StockItemRepository;
 import com.example.stocksync.repository.VendorRepository;
 import com.example.stocksync.vendor.VendorClient;
 import com.example.stocksync.vendor.VendorClientFactory;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -51,71 +53,106 @@ public class StockSyncService {
      */
     private void processStockDelta(Vendor vendor, StockItem item) {
         StockItem stockItem = stockItemRepository
-                .findByProductIdAndVendor_Name(item.getProductId(), vendor.getName())
+                .findBySkuAndVendor(item.getSku(), vendor.getName())
                 .orElse(StockItem.builder()
-                        .productId(item.getProductId())
-                        .vendor(vendor)
-                        .stock(0)
+                        .id(item.getId())
+                        .vendor(vendor.getName())
+                        .sku(item.getSku())
+                        .name(item.getName())
+                        .stockQuantity(0)
                         .build());
 
-        int oldStock = stockItem.getStock();
-        int newStock = item.getStock();
+        int oldStock = stockItem.getStockQuantity();
+        int newStock = item.getStockQuantity();
 
         if (oldStock != newStock) {
-            stockItem.setStock(newStock);
+            stockItem.setStockQuantity(newStock);
+            System.out.println("====================");
+            System.out.println(stockItem);
             stockItemRepository.save(stockItem);
-            saveAndPublishEvent(item.getProductId(), vendor, oldStock, newStock);
-            log.info("Stock updated for product {}: {} -> {}", item.getProductId(), oldStock, newStock);
+            saveAndPublishEvent(item.getSku(), vendor.getName(), oldStock, newStock);
+            log.info("Stock updated for product {}: {} -> {}", item.getId(), oldStock, newStock);
         } else {
-            log.debug("No stock change for product {}", item.getProductId());
+            log.debug("No stock change for product {}", item.getId());
         }
     }
 
     /**
      * Saves a StockEvent in the database and publishes it to the message queue.
      */
-    private void saveAndPublishEvent(String productId, Vendor vendor, int oldStock, int newStock) {
-        StockEvent stockEvent = StockEvent.builder()
-                .productId(productId)
-                .vendor(vendor)
-                .oldStock(oldStock)
-                .newStock(newStock)
-                .build();
-        stockEventRepository.save(stockEvent);
+    private void saveAndPublishEvent(String sku, String vendor, int oldStock, int newStock) {
+        if (oldStock > 0 && newStock == 0) {
+            log.info("Product {} from vendor {} went out of stock.", sku, vendor);
+            StockEvent stockEvent = StockEvent.builder()
+                    .sku(sku)
+                    .vendor(vendor)
+                    .oldStock(oldStock)
+                    .newStock(newStock)
+                    .eventType("OUT_OF_STOCK")
+                    .build();
+            stockEventRepository.save(stockEvent);
 
-        StockEventMessage eventMessage = new StockEventMessage(productId, vendor.getName(), oldStock, newStock);
-        eventPublisher.publishStockEvent(eventMessage);
+            StockEventMessage eventMessage = new StockEventMessage(sku, vendor, oldStock, newStock);
+            eventPublisher.publishStockEvent(eventMessage);
+        }
     }
     
     
     @Transactional
-    public void syncStock(String productId, int newStock, String vendorName) {
+    public void syncStock(String sku, int newStock, String vendorName) {
         Vendor vendor = vendorRepository.findByName(vendorName)
                 .orElseThrow(() -> new IllegalArgumentException("Vendor not found: " + vendorName));
 
         // Create a transient StockItem that represents the incoming data
         StockItem incoming = StockItem.builder()
-                .productId(productId)
-                .stock(newStock)
-                .vendor(vendor)
+                .sku(sku)
+                .stockQuantity(newStock)
+                .vendor(vendor.getName())
                 .build();
 
         // Reuse existing delta processing
         processStockDelta(vendor, incoming);
     }
     
+ 
+    
     @Transactional
     public void syncFromVendor(String vendorName) {
         log.info("Triggering vendor-wide sync for: {}", vendorName);
 
+        Vendor vendor = vendorRepository.findByName(vendorName)
+                .orElseGet(() -> {
+                    log.info("Vendor not found. Creating new vendor: {}", vendorName);
+                    Vendor newVendor = new Vendor();
+                    newVendor.setName(vendorName);
+                    newVendor.setType("CSV");
+                    newVendor.setEnabled(true);
+                    return vendorRepository.save(newVendor);
+                });
+
         VendorClient client = vendorClientFactory.getClient(vendorName);
         List<StockItem> stockItems = client.fetchStock(vendorName);
-
-        Vendor vendor = vendorRepository.findByName(vendorName)
-                .orElseThrow(() -> new IllegalArgumentException("Vendor not found: " + vendorName));
 
         stockItems.forEach(item -> processStockDelta(vendor, item));
     }
     
+    @Transactional
+    public void syncStock() {
+        List<Vendor> enabledVendors = vendorRepository.findByEnabledTrue();
+        for (Vendor vendor : enabledVendors) {
+            VendorClient client = vendorClientFactory.getClient(vendor.getType());
+            List<StockItem> items = client.fetchStock(vendor.getName());
+            for (StockItem item : items) {
+                processStockDelta(vendor, item);
+            }
+        }
+    }
+
+
+
     
+
+    public List<StockItem> getAllCurrentStock() {
+        return stockItemRepository.findAll();
+    }
 }
